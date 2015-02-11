@@ -26,6 +26,7 @@ pub type BmpResult<T> = Result<T, BmpError>;
 pub enum BmpError {
     WrongMagicNumbers(String),
     UnsupportedBitsPerPixel(String),
+    UnsupportedCompressionType(String),
     IncorrectDataSize(String),
     IoError(std::old_io::IoError)
 }
@@ -33,13 +34,19 @@ pub enum BmpError {
 impl fmt::Display for BmpError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            BmpError::WrongMagicNumbers(ref detail) =>
-                write!(fmt, "Wrong magic numbers: {}", detail),
-            BmpError::UnsupportedBitsPerPixel(ref detail) =>
-                write!(fmt, "Unsupported bits per pixel: {}", detail),
-            BmpError::IncorrectDataSize(ref detail) =>
-                write!(fmt, "Incorrect size of image data: {}", detail),
-            BmpError::IoError(ref error) => error.fmt(fmt)
+            BmpError::WrongMagicNumbers(ref detail) => {
+                write!(fmt, "Wrong magic numbers: {}", detail)
+            }
+            BmpError::UnsupportedBitsPerPixel(ref detail) => {
+                write!(fmt, "Unsupported bits per pixel: {}", detail)
+            }
+            BmpError::UnsupportedCompressionType(ref detail) => {
+                write!(fmt, "Unsupported compression type: {}", detail)
+            }
+            BmpError::IncorrectDataSize(ref detail) => {
+                write!(fmt, "Incorrect size of image data: {}", detail)
+            }
+            BmpError::IoError(ref error) => { error.fmt(fmt) }
         }
     }
 }
@@ -307,6 +314,11 @@ impl Image {
                 format!("Expected 24, but was {}", dib_header.bits_per_pixel)));
         }
 
+        if dib_header.compress_type != 0 {
+            return Err(BmpError::UnsupportedCompressionType(
+                format!("Expected 0, but was {}", dib_header.compress_type)));
+        }
+
         let row_size = ((24.0 * dib_header.width as f32 + 31.0) / 32.0).floor() as u32 * 4;
         let pixel_array_size = row_size * dib_header.height as u32;
         if pixel_array_size != dib_header.data_size {
@@ -475,7 +487,7 @@ mod tests {
         let result = Image::open("test/no_img.bmp");
         match result {
             Err(BmpError::IoError(_)) => (/* Expected */),
-            _ => panic!("Ghost image!?")
+            e => panic!("{:?}", e)
         }
     }
 
@@ -484,7 +496,7 @@ mod tests {
         let result = Image::open("test/bmptestsuite-0.9/valid/1bpp-1x1.bmp");
         match result {
             Err(BmpError::UnsupportedBitsPerPixel(_)) => (/* Expected */),
-            _ => panic!("1bpp should not be supported")
+            e => panic!("{:?}", e)
         }
     }
 
@@ -493,7 +505,7 @@ mod tests {
         let result = Image::open("test/bmptestsuite-0.9/corrupt/magicnumber-bad.bmp");
         match result {
             Err(BmpError::WrongMagicNumbers(_)) => (/* Expected */),
-            _ => panic!("Wrong magic numbers should not be supported")
+            e => panic!("{:?}", e)
         }
     }
 
