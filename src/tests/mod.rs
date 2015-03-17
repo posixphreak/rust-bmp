@@ -202,6 +202,16 @@ fn coordinates_iterator_gives_x_and_y_in_row_major_order() {
     assert_eq!(coords.next(), Some((1, 2)));
 }
 
+#[test]
+fn topdown_image_is_accessed_correctly() {
+    let mut img = open("test/bmptestsuite-0.9/valid/24bpp-topdown-320x240.bmp").unwrap();
+    assert_eq!(img.get_pixel(2, 2), consts::BLACK); // Start black background of text
+    assert_eq!(img.get_pixel(5, 4), consts::WHITE); // Top left of the first 'T'
+
+    img.set_pixel(5, 4, consts::BLUE);
+    assert_eq!(img.get_pixel(5, 4), consts::BLUE);
+}
+
 #[bench]
 fn write_bmp(b: &mut test::Bencher) {
     let img = Image::new(320, 240);

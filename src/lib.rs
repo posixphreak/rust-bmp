@@ -355,7 +355,11 @@ impl Image {
     /// ```
     #[inline]
     pub fn set_pixel(&mut self, x: u32, y: u32, val: Pixel) {
-        self.data[((self.height - y - 1) * self.width + x) as usize] = val;
+        let index = match self.dib_header.height < 0 {
+            true => (y * self.width + x) as usize,
+            false => ((self.height - y - 1) * self.width + x) as usize
+        };
+        self.data[index] = val;
     }
 
     /// Returns the pixel value at the position of `width` and `height`.
@@ -370,7 +374,11 @@ impl Image {
     /// ```
     #[inline]
     pub fn get_pixel(&self, x: u32, y: u32) -> Pixel {
-        self.data[((self.height - y - 1) * self.width + x) as usize]
+        let index = match self.dib_header.height < 0 {
+            true => (y * self.width + x) as usize,
+            false => ((self.height - y - 1) * self.width + x) as usize
+        };
+        self.data[index]
     }
 
     /// Returns a new `ImageIndex` that iterates over the image dimensions in top-bottom order.
@@ -419,7 +427,7 @@ impl Image {
     fn write_header(&self, bmp_data: &mut Vec<u8>) -> IoResult<()> {
         let header = &self.header;
         let dib_header = &self.dib_header;
-        let (header_size, data_size) = file_size!(24, dib_header.width, dib_header.height);
+        let (header_size, data_size) = file_size!(24, self.width, self.height);
 
         try!(bmp_data.write_all(&[B, M]));
 
